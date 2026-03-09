@@ -99,7 +99,7 @@ jobs:
         shell: bash
         run: |
           rm -rf .pack-archive
-          mkdir -p .pack-archive
+          mkdir -p .pack-archive dist
           cp "target/release/${{ matrix.binary_name }}" .pack-archive/
           cp README.md README.zh_CN.md LICENSE .pack-archive/
           tar -czf "dist/${{ matrix.archive_name }}" -C .pack-archive .
@@ -111,7 +111,7 @@ jobs:
           package_name="todox"
 
           rm -rf .pack-deb
-          mkdir -p .pack-deb/DEBIAN
+          mkdir -p .pack-deb/DEBIAN dist
           install -Dm755 "target/release/${{ matrix.binary_name }}" ".pack-deb/usr/bin/todox"
           install -Dm644 README.md ".pack-deb/usr/share/doc/${package_name}/README.md"
           install -Dm644 README.zh_CN.md ".pack-deb/usr/share/doc/${package_name}/README.zh_CN.md"
@@ -134,7 +134,7 @@ jobs:
         shell: pwsh
         run: |
           Remove-Item -Recurse -Force .pack-archive -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path .pack-archive | Out-Null
+          New-Item -ItemType Directory -Force -Path ".pack-archive", "dist" | Out-Null
           Copy-Item -Path "target/release/${{ matrix.binary_name }}" -Destination ".pack-archive/"
           Copy-Item -Path "README.md", "README.zh_CN.md", "LICENSE" -Destination ".pack-archive/"
           Compress-Archive -Path ".pack-archive/*" -DestinationPath "dist/${{ matrix.archive_name }}" -Force
