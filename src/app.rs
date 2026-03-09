@@ -151,7 +151,7 @@ impl App {
             i18n_dir,
             config,
             i18n,
-            filter: Filter::All,
+            filter: Filter::Active,
             search_query: String::new(),
             mode: AppMode::List,
             selected_task_id: None,
@@ -779,6 +779,42 @@ mod tests {
         let config = Config::default();
         let i18n = I18n::load(&config.i18n.locale, &i18n_dir).unwrap();
         App::new(store, path, config_path, i18n_dir, config, i18n)
+    }
+
+    #[test]
+    fn default_filter_shows_active_tasks() {
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("tasks.json");
+        let mut store = TaskStore::new();
+        store
+            .add_task(
+                TaskDraft {
+                    title: "任务 D".into(),
+                    notes: String::new(),
+                    priority: Priority::P2,
+                    due_date: None,
+                },
+                fixed_time("2026-03-08T10:00:00Z"),
+            )
+            .unwrap();
+        store
+            .add_task(
+                TaskDraft {
+                    title: "任务 E".into(),
+                    notes: String::new(),
+                    priority: Priority::P2,
+                    due_date: None,
+                },
+                fixed_time("2026-03-08T10:05:00Z"),
+            )
+            .unwrap();
+        store.toggle_task(2, fixed_time("2026-03-08T10:10:00Z"));
+
+        let app = make_app(store, path);
+
+        assert_eq!(app.filter(), crate::model::Filter::Active);
+        assert_eq!(app.visible_tasks().len(), 1);
+        assert_eq!(app.visible_tasks()[0].title, "任务 D");
     }
 
     #[test]

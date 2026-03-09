@@ -64,6 +64,102 @@ After that, you can launch it anywhere with:
 todox
 ```
 
+## Download Prebuilt Releases
+
+You can download ready-to-use binaries and Linux `.deb` packages from the
+[GitHub Releases](https://github.com/gcnyin/todox/releases) page.
+
+Current release assets:
+
+- Linux x86_64: `todox-x86_64-unknown-linux-gnu.tar.gz`, `todox_<version>_amd64.deb`
+- Linux arm64: `todox-aarch64-unknown-linux-gnu.tar.gz`, `todox_<version>_arm64.deb`
+- macOS Apple Silicon: `todox-aarch64-apple-darwin.tar.gz`
+- Windows x64: `todox-x86_64-pc-windows-msvc.zip`
+
+Pick the asset that matches your system, then use one of the methods below.
+
+### Download with `curl` or `wget`
+
+For example, to download the Linux x86_64 binary archive:
+
+```bash
+VERSION=v0.1.0
+BASE_URL="https://github.com/gcnyin/todox/releases/download/${VERSION}"
+
+curl -LO "${BASE_URL}/todox-x86_64-unknown-linux-gnu.tar.gz"
+```
+
+Or with `wget`:
+
+```bash
+VERSION=v0.1.0
+BASE_URL="https://github.com/gcnyin/todox/releases/download/${VERSION}"
+
+wget "${BASE_URL}/todox-x86_64-unknown-linux-gnu.tar.gz"
+```
+
+To download the Debian package instead:
+
+```bash
+VERSION=v0.1.0
+BASE_URL="https://github.com/gcnyin/todox/releases/download/${VERSION}"
+
+curl -LO "${BASE_URL}/todox_0.1.0_amd64.deb"
+```
+
+Replace the filename with the asset you need for your platform.
+
+## Use a Downloaded Binary Archive
+
+### Linux / macOS
+
+Extract the archive and run the binary directly:
+
+```bash
+tar -xzf todox-<target>.tar.gz
+./todox
+```
+
+To install it as a regular command:
+
+```bash
+install -m 755 ./todox /usr/local/bin/todox
+todox
+```
+
+### Windows
+
+Extract `todox-x86_64-pc-windows-msvc.zip`, then run `todox.exe`.
+If you want to launch it from any terminal, move `todox.exe` into a directory
+that is already on your `PATH`.
+
+## Install the Debian Package
+
+For Debian, Ubuntu, and compatible distributions, you can install the `.deb`
+package directly:
+
+```bash
+sudo apt install ./todox_<version>_amd64.deb
+```
+
+Or on Linux arm64:
+
+```bash
+sudo apt install ./todox_<version>_arm64.deb
+```
+
+After installation, launch it with:
+
+```bash
+todox
+```
+
+Remove it later if needed:
+
+```bash
+sudo apt remove todox
+```
+
 ## Keyboard Basics
 
 Main list:

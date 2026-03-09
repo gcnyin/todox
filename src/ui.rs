@@ -206,7 +206,6 @@ fn render_task_list(frame: &mut Frame, app: &App, area: Rect) {
 
 fn render_task_item(app: &App, task: &Task, today: NaiveDate, index: usize) -> ListItem<'static> {
     let (priority_fg, priority_bg) = priority_tone(task.priority);
-    let (status_fg, status_bg) = status_tone(task.status);
     let (due_fg, due_bg) = due_tone(task, today);
     let title_style = if task.status == TaskStatus::Done {
         Style::default()
@@ -219,12 +218,6 @@ fn render_task_item(app: &App, task: &Task, today: NaiveDate, index: usize) -> L
 
     ListItem::new(Line::from(vec![
         badge(format!(" {:02} ", index + 1), TEXT_DIM, SURFACE_ALT),
-        Span::raw(" "),
-        badge(
-            format!(" {} ", app.t(task.status.translation_key())),
-            status_fg,
-            status_bg,
-        ),
         Span::raw(" "),
         badge(
             format!(" {} ", priority_label(app, task.priority, true, true)),
@@ -1280,6 +1273,38 @@ mod tests {
         assert!(normalized.contains("03-09") || normalized.contains("Today"));
         assert!(!normalized.contains("Thisnoteshouldstayoutofthelistrow"));
         assert!(!normalized.contains("10:00"));
+    }
+
+    #[test]
+    fn task_list_hides_status_text_in_rows() {
+        let mut active_app = make_task_app();
+        for _ in 0..4 {
+            active_app
+                .handle_key_event(crossterm::event::KeyEvent::from(
+                    crossterm::event::KeyCode::Char('f'),
+                ))
+                .unwrap();
+        }
+        let active_rendered = render_task_list_to_string(&active_app, 100, 10);
+        let active_normalized = normalize_rendered_text(&active_rendered);
+        assert!(!active_normalized.contains("Active"));
+
+        let mut done_app = make_task_app();
+        done_app
+            .handle_key_event(crossterm::event::KeyEvent::from(
+                crossterm::event::KeyCode::Char(' '),
+            ))
+            .unwrap();
+        for _ in 0..4 {
+            done_app
+                .handle_key_event(crossterm::event::KeyEvent::from(
+                    crossterm::event::KeyCode::Char('f'),
+                ))
+                .unwrap();
+        }
+        let done_rendered = render_task_list_to_string(&done_app, 100, 10);
+        let done_normalized = normalize_rendered_text(&done_rendered);
+        assert!(!done_normalized.contains("Done"));
     }
 
     #[test]

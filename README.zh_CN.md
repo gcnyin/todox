@@ -64,6 +64,100 @@ install -m 755 ./target/release/todox /usr/local/bin/todox
 todox
 ```
 
+## 下载预编译版本
+
+你可以直接从 [GitHub Releases](https://github.com/gcnyin/todox/releases)
+页面下载已经编译好的二进制文件和 Linux `.deb` 安装包。
+
+当前提供的发布产物：
+
+- Linux x86_64：`todox-x86_64-unknown-linux-gnu.tar.gz`、`todox_<version>_amd64.deb`
+- Linux arm64：`todox-aarch64-unknown-linux-gnu.tar.gz`、`todox_<version>_arm64.deb`
+- macOS Apple Silicon：`todox-aarch64-apple-darwin.tar.gz`
+- Windows x64：`todox-x86_64-pc-windows-msvc.zip`
+
+请根据你的系统选择对应文件，然后按下面的方法使用。
+
+### 使用 `curl` 或 `wget` 下载
+
+例如，下载 Linux x86_64 的二进制压缩包：
+
+```bash
+VERSION=v0.1.0
+BASE_URL="https://github.com/gcnyin/todox/releases/download/${VERSION}"
+
+curl -LO "${BASE_URL}/todox-x86_64-unknown-linux-gnu.tar.gz"
+```
+
+或者使用 `wget`：
+
+```bash
+VERSION=v0.1.0
+BASE_URL="https://github.com/gcnyin/todox/releases/download/${VERSION}"
+
+wget "${BASE_URL}/todox-x86_64-unknown-linux-gnu.tar.gz"
+```
+
+如果想下载 `.deb` 安装包：
+
+```bash
+VERSION=v0.1.0
+BASE_URL="https://github.com/gcnyin/todox/releases/download/${VERSION}"
+
+curl -LO "${BASE_URL}/todox_0.1.0_amd64.deb"
+```
+
+把文件名替换成你所需平台对应的发布产物即可。
+
+## 使用下载好的二进制压缩包
+
+### Linux / macOS
+
+先解压，再直接运行二进制文件：
+
+```bash
+tar -xzf todox-<target>.tar.gz
+./todox
+```
+
+如果你希望把它安装成全局命令，可以执行：
+
+```bash
+install -m 755 ./todox /usr/local/bin/todox
+todox
+```
+
+### Windows
+
+解压 `todox-x86_64-pc-windows-msvc.zip` 后，直接运行 `todox.exe` 即可。
+如果你希望在任意终端直接启动，可以把 `todox.exe` 放到已经加入 `PATH` 的目录中。
+
+## 安装 Debian 包
+
+对于 Debian、Ubuntu 及兼容发行版，你可以直接安装 `.deb` 包：
+
+```bash
+sudo apt install ./todox_<version>_amd64.deb
+```
+
+如果你使用的是 Linux arm64：
+
+```bash
+sudo apt install ./todox_<version>_arm64.deb
+```
+
+安装完成后，可以直接运行：
+
+```bash
+todox
+```
+
+如果后续想卸载：
+
+```bash
+sudo apt remove todox
+```
+
 ## 键位说明
 
 主列表：

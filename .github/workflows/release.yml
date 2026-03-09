@@ -1,0 +1,261 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing git tag to publish, for example v1.0.0
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref_name || inputs.tag }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    name: create-release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.resolve-tag.outputs.tag }}
+
+    steps:
+      - name: Resolve tag
+        id: resolve-tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE:-}" == "tag" ]]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="${{ inputs.tag }}"
+          fi
+
+          if [[ -z "$tag" ]]; then
+            echo "Tag is required" >&2
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure release exists
+        uses: actions/github-script@v7
+        env:
+          TAG: ${{ steps.resolve-tag.outputs.tag }}
+        with:
+          script: |
+            const tag = process.env.TAG;
+            await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `tags/${tag}`,
+            });
+
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag,
+              });
+              core.info(`Release already exists: ${existing.data.html_url}`);
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+
+              const created = await github.rest.repos.createRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: tag,
+                name: tag,
+                generate_release_notes: true,
+              });
+              core.info(`Created release: ${created.data.html_url}`);
+            }
+
+  build-assets:
+    name: build-${{ matrix.target }}
+    needs: create-release
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            binary_name: todox
+            archive_name: todox-x86_64-unknown-linux-gnu.tar.gz
+            linux_deb: true
+            deb_arch: amd64
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            binary_name: todox
+            archive_name: todox-aarch64-unknown-linux-gnu.tar.gz
+            linux_deb: true
+            deb_arch: arm64
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            binary_name: todox
+            archive_name: todox-aarch64-apple-darwin.tar.gz
+            linux_deb: false
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            binary_name: todox.exe
+            archive_name: todox-x86_64-pc-windows-msvc.zip
+            linux_deb: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Read package metadata
+        id: package-meta
+        shell: bash
+        run: |
+          version="$(grep -m1 '^version = ' Cargo.toml | sed -E 's/version = "([^"]+)"/\1/')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if [[ "${{ matrix.linux_deb }}" == 'true' ]]; then
+            echo "deb_name=todox_${version}_${{ matrix.deb_arch }}.deb" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release binary
+        run: cargo build --locked --release
+
+      - name: Package build artifact (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          rm -rf .pack-archive
+          mkdir -p .pack-archive
+          cp "target/release/${{ matrix.binary_name }}" .pack-archive/
+          cp README.md README.zh_CN.md LICENSE .pack-archive/
+          tar -czf "dist/${{ matrix.archive_name }}" -C .pack-archive .
+
+      - name: Build Debian package
+        if: matrix.linux_deb
+        shell: bash
+        run: |
+          package_name="todox"
+
+          rm -rf .pack-deb
+          mkdir -p .pack-deb/DEBIAN
+          install -Dm755 "target/release/${{ matrix.binary_name }}" ".pack-deb/usr/bin/todox"
+          install -Dm644 README.md ".pack-deb/usr/share/doc/${package_name}/README.md"
+          install -Dm644 README.zh_CN.md ".pack-deb/usr/share/doc/${package_name}/README.zh_CN.md"
+          install -Dm644 LICENSE ".pack-deb/usr/share/doc/${package_name}/copyright"
+
+          cat > .pack-deb/DEBIAN/control <<EOF
+          Package: ${package_name}
+          Version: ${{ steps.package-meta.outputs.version }}
+          Section: utils
+          Priority: optional
+          Architecture: ${{ matrix.deb_arch }}
+          Maintainer: todox maintainers <noreply@github.com>
+          Description: Local-first terminal todo app built with Rust and ratatui.
+          EOF
+
+          dpkg-deb --build --root-owner-group .pack-deb "dist/${{ steps.package-meta.outputs.deb_name }}"
+
+      - name: Package build artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force .pack-archive -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path .pack-archive | Out-Null
+          Copy-Item -Path "target/release/${{ matrix.binary_name }}" -Destination ".pack-archive/"
+          Copy-Item -Path "README.md", "README.zh_CN.md", "LICENSE" -Destination ".pack-archive/"
+          Compress-Archive -Path ".pack-archive/*" -DestinationPath "dist/${{ matrix.archive_name }}" -Force
+
+      - name: Upload packaged asset
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: publish-release-assets
+    needs:
+      - create-release
+      - build-assets
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packaged assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Upload assets to GitHub Release
+        uses: actions/github-script@v7
+        env:
+          TAG: ${{ needs.create-release.outputs.tag }}
+          ASSET_DIR: release-assets
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const tag = process.env.TAG;
+            const assetDir = process.env.ASSET_DIR;
+            const files = fs.readdirSync(assetDir).map((name) => path.join(assetDir, name));
+
+            if (files.length === 0) {
+              core.setFailed(`No assets found in ${assetDir}`);
+              return;
+            }
+
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag,
+            });
+
+            for (const file of files) {
+              const assetName = path.basename(file);
+              const existing = release.assets.find((asset) => asset.name === assetName);
+
+              if (existing) {
+                await github.rest.repos.deleteReleaseAsset({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  asset_id: existing.id,
+                });
+              }
+
+              const data = fs.readFileSync(file);
+              await github.rest.repos.uploadReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: release.id,
+                name: assetName,
+                data,
+                headers: {
+                  'content-type': 'application/octet-stream',
+                  'content-length': data.length,
+                },
+              });
+
+              core.info(`Uploaded ${assetName}`);
+            }

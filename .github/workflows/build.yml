@@ -1,0 +1,148 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  checks:
+    name: checks-ubuntu-x86_64
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Run tests
+        run: cargo test --locked
+
+  package:
+    name: package-${{ matrix.target }}
+    needs: checks
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            binary_name: todox
+            archive_name: todox-x86_64-unknown-linux-gnu.tar.gz
+            linux_deb: true
+            deb_arch: amd64
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            binary_name: todox
+            archive_name: todox-aarch64-unknown-linux-gnu.tar.gz
+            linux_deb: true
+            deb_arch: arm64
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            binary_name: todox
+            archive_name: todox-aarch64-apple-darwin.tar.gz
+            linux_deb: false
+          - runner: windows-2025
+            target: x86_64-pc-windows-msvc
+            binary_name: todox.exe
+            archive_name: todox-x86_64-pc-windows-msvc.zip
+            linux_deb: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Read package metadata
+        id: package-meta
+        shell: bash
+        run: |
+          version="$(grep -m1 '^version = ' Cargo.toml | sed -E 's/version = "([^"]+)"/\1/')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          if [[ "${{ matrix.linux_deb }}" == 'true' ]]; then
+            echo "deb_name=todox_${version}_${{ matrix.deb_arch }}.deb" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release binary
+        run: cargo build --locked --release
+
+      - name: Package build artifact (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          rm -rf .pack-archive
+          mkdir -p .pack-archive
+          cp "target/release/${{ matrix.binary_name }}" .pack-archive/
+          cp README.md README.zh_CN.md LICENSE .pack-archive/
+          tar -czf "dist/${{ matrix.archive_name }}" -C .pack-archive .
+
+      - name: Build Debian package
+        if: matrix.linux_deb
+        shell: bash
+        run: |
+          package_name="todox"
+
+          rm -rf .pack-deb
+          mkdir -p .pack-deb/DEBIAN
+          install -Dm755 "target/release/${{ matrix.binary_name }}" ".pack-deb/usr/bin/todox"
+          install -Dm644 README.md ".pack-deb/usr/share/doc/${package_name}/README.md"
+          install -Dm644 README.zh_CN.md ".pack-deb/usr/share/doc/${package_name}/README.zh_CN.md"
+          install -Dm644 LICENSE ".pack-deb/usr/share/doc/${package_name}/copyright"
+
+          cat > .pack-deb/DEBIAN/control <<EOF
+          Package: ${package_name}
+          Version: ${{ steps.package-meta.outputs.version }}
+          Section: utils
+          Priority: optional
+          Architecture: ${{ matrix.deb_arch }}
+          Maintainer: todox maintainers <noreply@github.com>
+          Description: Local-first terminal todo app built with Rust and ratatui.
+          EOF
+
+          dpkg-deb --build --root-owner-group .pack-deb "dist/${{ steps.package-meta.outputs.deb_name }}"
+
+      - name: Package build artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force .pack-archive -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path .pack-archive | Out-Null
+          Copy-Item -Path "target/release/${{ matrix.binary_name }}" -Destination ".pack-archive/"
+          Copy-Item -Path "README.md", "README.zh_CN.md", "LICENSE" -Destination ".pack-archive/"
+          Compress-Archive -Path ".pack-archive/*" -DestinationPath "dist/${{ matrix.archive_name }}" -Force
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
