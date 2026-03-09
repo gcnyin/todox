@@ -74,7 +74,6 @@ Current release assets:
 - Linux x86_64: `todox-x86_64-unknown-linux-gnu.tar.gz`, `todox_<version>_amd64.deb`
 - Linux arm64: `todox-aarch64-unknown-linux-gnu.tar.gz`, `todox_<version>_arm64.deb`
 - macOS Apple Silicon: `todox-aarch64-apple-darwin.tar.gz`
-- Windows x64: `todox-x86_64-pc-windows-msvc.zip`
 
 Pick the asset that matches your system, then use one of the methods below.
 
@@ -126,12 +125,6 @@ To install it as a regular command:
 install -m 755 ./todox /usr/local/bin/todox
 todox
 ```
-
-### Windows
-
-Extract `todox-x86_64-pc-windows-msvc.zip`, then run `todox.exe`.
-If you want to launch it from any terminal, move `todox.exe` into a directory
-that is already on your `PATH`.
 
 ## Install the Debian Package
 

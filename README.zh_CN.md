@@ -74,7 +74,6 @@ todox
 - Linux x86_64：`todox-x86_64-unknown-linux-gnu.tar.gz`、`todox_<version>_amd64.deb`
 - Linux arm64：`todox-aarch64-unknown-linux-gnu.tar.gz`、`todox_<version>_arm64.deb`
 - macOS Apple Silicon：`todox-aarch64-apple-darwin.tar.gz`
-- Windows x64：`todox-x86_64-pc-windows-msvc.zip`
 
 请根据你的系统选择对应文件，然后按下面的方法使用。
 
@@ -126,11 +125,6 @@ tar -xzf todox-<target>.tar.gz
 install -m 755 ./todox /usr/local/bin/todox
 todox
 ```
-
-### Windows
-
-解压 `todox-x86_64-pc-windows-msvc.zip` 后，直接运行 `todox.exe` 即可。
-如果你希望在任意终端直接启动，可以把 `todox.exe` 放到已经加入 `PATH` 的目录中。
 
 ## 安装 Debian 包
 

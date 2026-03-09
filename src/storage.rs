@@ -188,43 +188,8 @@ fn next_id_from_tasks(store: &TaskStore) -> u64 {
         .saturating_add(1)
 }
 
-#[cfg(not(windows))]
 fn replace_file(tmp_path: &Path, path: &Path) -> AppResult<()> {
     fs::rename(tmp_path, path)?;
-    Ok(())
-}
-
-#[cfg(windows)]
-fn replace_file(tmp_path: &Path, path: &Path) -> AppResult<()> {
-    use std::ffi::OsStr;
-    use std::iter;
-    use std::os::windows::ffi::OsStrExt;
-
-    use windows_sys::Win32::Foundation::GetLastError;
-    use windows_sys::Win32::Storage::FileSystem::{
-        MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH, MoveFileExW,
-    };
-
-    fn wide(value: &OsStr) -> Vec<u16> {
-        value.encode_wide().chain(iter::once(0)).collect()
-    }
-
-    let from = wide(tmp_path.as_os_str());
-    let to = wide(path.as_os_str());
-    let ok = unsafe {
-        MoveFileExW(
-            from.as_ptr(),
-            to.as_ptr(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
-        )
-    };
-
-    if ok == 0 {
-        return Err(AppError::Io(std::io::Error::from_raw_os_error(
-            GetLastError() as i32,
-        )));
-    }
-
     Ok(())
 }
 

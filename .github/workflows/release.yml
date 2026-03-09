@@ -107,11 +107,6 @@ jobs:
             binary_name: todox
             archive_name: todox-aarch64-apple-darwin.tar.gz
             linux_deb: false
-          - runner: windows-2025
-            target: x86_64-pc-windows-msvc
-            binary_name: todox.exe
-            archive_name: todox-x86_64-pc-windows-msvc.zip
-            linux_deb: false
 
     steps:
       - name: Checkout repository
@@ -137,8 +132,7 @@ jobs:
       - name: Build release binary
         run: cargo build --locked --release
 
-      - name: Package build artifact (Unix)
-        if: runner.os != 'Windows'
+      - name: Package build artifact
         shell: bash
         run: |
           rm -rf .pack-archive
@@ -171,16 +165,6 @@ jobs:
           EOF
 
           dpkg-deb --build --root-owner-group .pack-deb "dist/${{ steps.package-meta.outputs.deb_name }}"
-
-      - name: Package build artifact (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Remove-Item -Recurse -Force .pack-archive -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path ".pack-archive", "dist" | Out-Null
-          Copy-Item -Path "target/release/${{ matrix.binary_name }}" -Destination ".pack-archive/"
-          Copy-Item -Path "README.md", "README.zh_CN.md", "LICENSE" -Destination ".pack-archive/"
-          Compress-Archive -Path ".pack-archive/*" -DestinationPath "dist/${{ matrix.archive_name }}" -Force
 
       - name: Upload packaged asset
         uses: actions/upload-artifact@v4
