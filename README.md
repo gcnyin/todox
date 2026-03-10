@@ -26,6 +26,15 @@ Use a custom data file if you want to isolate a workspace or test dataset:
 cargo run -- --data-file /custom/tasks.json
 ```
 
+## Install from crates.io
+
+```bash
+cargo install todox-tui
+todox
+```
+
+The package name on crates.io is `todox-tui`, while the installed command remains `todox`.
+
 ## Build Release
 
 Build an optimized release binary:
@@ -231,6 +240,19 @@ The built-in `en_US` catalog in [`src/i18n.rs`](./src/i18n.rs) is the reference 
 cargo fmt
 cargo test
 ```
+
+## Release Checklist
+
+```bash
+# 1) bump the version in Cargo.toml
+cargo fmt
+cargo test
+cargo package --list
+cargo publish --dry-run --registry crates-io
+cargo publish --registry crates-io
+```
+
+After publishing, verify the package page on crates.io and update the GitHub release assets if you are shipping prebuilt binaries.
 
 ## License
 

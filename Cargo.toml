@@ -1,9 +1,21 @@
 [package]
-name = "todox"
+name = "todox-tui"
 version = "0.1.0"
 edition = "2024"
+description = "Local-first terminal todo app built with Rust and ratatui"
 license = "GPL-3.0-or-later"
 readme = "README.md"
+repository = "https://github.com/gcnyin/todox"
+homepage = "https://github.com/gcnyin/todox"
+keywords = ["todo", "cli", "tui", "productivity"]
+categories = ["command-line-utilities"]
+
+[lib]
+name = "todox"
+
+[[bin]]
+name = "todox"
+path = "src/main.rs"
 
 [dependencies]
 chrono = { version = "0.4", features = ["clock", "serde"] }

@@ -26,6 +26,15 @@ cargo run
 cargo run -- --data-file /custom/tasks.json
 ```
 
+## 从 crates.io 安装
+
+```bash
+cargo install todox-tui
+todox
+```
+
+在 crates.io 上的包名是 `todox-tui`，安装后的命令仍然是 `todox`。
+
 ## 构建 Release
 
 构建优化后的 release 可执行文件：
@@ -230,6 +239,19 @@ sudo apt remove todox
 cargo fmt
 cargo test
 ```
+
+## 发布检查清单
+
+```bash
+# 1) 先在 Cargo.toml 中更新版本号
+cargo fmt
+cargo test
+cargo package --list
+cargo publish --dry-run --registry crates-io
+cargo publish --registry crates-io
+```
+
+发布后，记得到 crates.io 检查包页面是否正常；如果你也提供预编译二进制，请同步更新 GitHub Releases 里的产物。
 
 ## 许可证
 

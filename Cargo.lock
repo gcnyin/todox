@@ -891,7 +891,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "todox"
+name = "todox-tui"
 version = "0.1.0"
 dependencies = [
  "chrono",

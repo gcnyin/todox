@@ -1077,12 +1077,12 @@ mod tests {
 
     use crate::app::{App, FormField, TaskForm};
     use crate::i18n::I18n;
-    use crate::model::{Priority, TaskDraft, TaskStore};
+    use crate::model::{Priority, TaskDraft, TaskStore, today_local};
     use crate::storage::Config;
 
     use super::{
         centered_rect, footer_height, priority_label, render_footer, render_form_modal,
-        render_help_modal, render_sidebar, render_task_list, render_top_bar,
+        render_help_modal, render_sidebar, render_task_list, render_top_bar, task_due_chip_label,
     };
 
     fn buffer_to_string(buffer: &Buffer) -> String {
@@ -1266,11 +1266,13 @@ mod tests {
     #[test]
     fn task_list_renders_single_line_without_updated_or_notes() {
         let app = make_task_app();
+        let tasks = app.visible_tasks();
+        let expected_due = normalize_rendered_text(&task_due_chip_label(&app, tasks[0], today_local()));
         let rendered = render_task_list_to_string(&app, 100, 10);
         let normalized = normalize_rendered_text(&rendered);
         assert!(normalized.contains("Shipthecompactlistredesignbeforereview"));
         assert!(normalized.contains("P1"));
-        assert!(normalized.contains("03-09") || normalized.contains("Today"));
+        assert!(normalized.contains(&expected_due));
         assert!(!normalized.contains("Thisnoteshouldstayoutofthelistrow"));
         assert!(!normalized.contains("10:00"));
     }
